@@ -24,15 +24,15 @@ pub struct Speedometer {
 impl Speedometer {
     pub fn defualt() -> Speedometer{
         return Speedometer{
-            long_notch_color: Color{red: 0.27, green: 0.76, blue: 0.80, alpha: 1.0},
-            short_notch_color: Color{red: 0.7, green: 0.88, blue: 0.88, alpha: 1.0},
-            notch_text_color: Color{red: 0.0, green: 0.49, blue: 0.2, alpha: 1.0},
-            speed_bar_color: Color{red: 1.0, green: 1.0, blue: 1.0, alpha: 1.0},
-            speed_arc_color: Color{red: 0.75, green: 0.84, blue: 0.19, alpha: 1.0},
-            speed_display_text_color: Color{red: 0.44, green: 0.75, blue: 0.27, alpha: 1.0},
-            outer_circle_outline_color: Color{red: 0.0, green: 0.48, blue: 0.20, alpha: 1.0},
-            outer_circle_fill_color: Color{red: 0.08, green: 0.28, blue: 0.20, alpha: 1.0},
-            inner_circle_outline_color: Color{red: 0.0, green: 0.49, blue: 0.20, alpha: 1.0},
+            long_notch_color: Color{red: 0.44, green: 0.75, blue: 0.27},
+            short_notch_color: Color{red: 0.0, green: 0.47, blue: 0.20},
+            notch_text_color: Color{red: 0.44, green: 0.75, blue: 0.27},
+            speed_bar_color: Color{red: 1.0, green: 1.0, blue: 1.0},
+            speed_arc_color: Color{red: 0.75, green: 0.84, blue: 0.19},
+            speed_display_text_color: Color{red: 0.74, green: 0.84, blue: 0.19},
+            outer_circle_outline_color: Color{red: 0.44, green: 0.75, blue: 0.27},
+            outer_circle_fill_color: Color{red: 0.08, green: 0.28, blue: 0.20},
+            inner_circle_outline_color: Color{red: 0.0, green: 0.47, blue: 0.20},
             width: 800,
             height: 800,
             long_notch_length: 70,
@@ -40,7 +40,7 @@ impl Speedometer {
             notch_interval: 20,
             font_size: 44.0,
             speed_font_size: 50.0,
-            bounds: (0,160),
+            bounds: (0, 160),
         };
     }
 }
@@ -48,6 +48,5 @@ impl Speedometer {
 pub struct Color {
     pub red: f64,
     pub blue: f64,
-    pub green: f64,
-    pub alpha: f64,
+    pub green: f64
 }
