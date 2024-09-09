@@ -101,13 +101,19 @@ pub fn on_draw(cr :&Context, config: Arc<Speedometer>, speed: Arc<Mutex<f64>>) {
 //TODO comment math functions to explain what its atually doing
 fn speed_to_draw_coords(speed: &f64, radius: &f64, bounds: &(f64, f64), center: &(f64, f64), line_length: &f64) -> ((f64, f64), (f64, f64)) {
     let max_bound: f64 = bounds.1;
+
+    // Offsets the numbers so that they fit the bounds of the speedometer
     let adjusted_max: f64 = (max_bound * 6.0) / 8.0;
     let speed_offset: f64 = speed - ((1.0/6.0) * adjusted_max);
 
-    let pre_raw: f64 = ((adjusted_max - speed_offset) / adjusted_max) * PI;
-    let x_raw: f64 = pre_raw.cos();
-    let y_raw: f64 = pre_raw.sin() * -1.0;
+    // Calculates required rotation in radians
+    let radians: f64 = ((adjusted_max - speed_offset) / adjusted_max) * PI;
 
+    // Gets X and Y assosiated with the angle
+    let x_raw: f64 = radians.cos();
+    let y_raw: f64 = radians.sin() * -1.0;
+
+    // Multiplys the X and Y by the radius
     let x_start = x_raw * radius;
     let y_start = y_raw * radius;
     let x_stop = x_raw * (radius - line_length);
@@ -118,23 +124,30 @@ fn speed_to_draw_coords(speed: &f64, radius: &f64, bounds: &(f64, f64), center: 
 
 fn speed_to_coords(speed: &f64, radius: &f64, bounds: &(f64, f64), center: &(f64, f64)) -> (f64, f64) {
     let max_bound = bounds.1;
-    let adjusted_max = (max_bound * 6.0) / 8.0;
+
+    // Offsets the numbers so that they fit the bounds of the speedometer
+    let adjusted_max = (max_bound * 6.0) / 8.0; 
     let speed_offset = speed - ((1.0/6.0) * adjusted_max);
 
-    let pre_raw: f64 = ((adjusted_max - speed_offset) / adjusted_max) * PI;
+    // Calculates required rotation in radians
+    let radians: f64 = ((adjusted_max - speed_offset) / adjusted_max) * PI;
 
-    let x: f64= pre_raw.cos() * radius;
-    let y: f64= -pre_raw.sin() * radius;
+    // Multiplys the X and Y by the radius
+    let x: f64= radians.cos() * radius;
+    let y: f64= -radians.sin() * radius;
 
     (x + center.0, y + center.1)
 }
 
 fn speed_to_arc(speed: &f64, bounds: &(f64, f64)) -> (f64, f64) {
     let max_bound = bounds.1;
+
+    // Offsets the numbers so that they fit the bounds of the speedometer
     let adjusted_max = (max_bound * 6.0) / 8.0;
     let speed_offset = speed - ((1.0/6.0) * adjusted_max);
     let speed_minimum = bounds.0 + ((1.0/6.0) * adjusted_max);
 
+    // Calculates the two angles in radians
     let angle1 = ((adjusted_max - speed_minimum) / adjusted_max) * PI;
     let angle2 = -((adjusted_max - speed_offset) / adjusted_max) * PI;
 
