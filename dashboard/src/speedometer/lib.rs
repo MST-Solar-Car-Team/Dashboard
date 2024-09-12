@@ -2,7 +2,7 @@ use std::{f64::consts::PI, sync::{Arc, Mutex}};
 
 use cairo::{Context, FontSlant, FontWeight};
 
-use crate::{config::Speedometer, util::f};
+use crate::{ config::structs::Speedometer, util::f};
 
 
 // Function to draw the speedometer widget

@@ -1,0 +1,22 @@
+{
+    "speedometer":
+    {
+        "long_notch_color": [114, 191, 68],
+        "short_notch_color": [0, 122, 51],
+        "notch_text_color": [114, 191, 68],
+        "speed_bar_color": [255, 255, 255],
+        "speed_arc_color": [191, 215, 48],
+        "speed_display_text_color": [191, 215, 48],
+        "outer_circle_outline_color": [114, 191, 68],
+        "outer_circle_fill_color": [21, 71, 52],
+        "inner_circle_outline_color": [0, 122, 51],
+        "width": 800,
+        "height": 800,
+        "long_notch_length": 70,
+        "short_notch_length": 50,
+        "notch_interval": 20,
+        "font_size": 44.0,
+        "speed_font_size": 50.0,
+        "bounds": [0, 160]
+    }
+}
