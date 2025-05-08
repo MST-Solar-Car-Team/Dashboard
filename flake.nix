@@ -13,64 +13,80 @@
   outputs = { self, nixpkgs, flake-utils, rust-overlay }:
     flake-utils.lib.eachDefaultSystem (system:
       let
-        overlays = [ (import rust-overlay)];
-        pkgs = import nixpkgs {
+        overlays = [ (import rust-overlay) ];
+
+        # Host packages: used for tooling like cargo, rustc, etc.
+        hostPkgs = import nixpkgs {
           inherit system overlays;
+        };
+
+        # Cross packages: for the target platform (aarch64)
+        crossPkgs = import nixpkgs {
+          inherit overlays;
+          system = system;
+          crossSystem = {
+            config = "aarch64-unknown-linux-gnu";
+          };
         };
 
         target = "aarch64-unknown-linux-gnu";
 
-        rustToolchain = pkgs.rust-bin.stable.latest.default.override {
+        rustToolchain = hostPkgs.rust-bin.stable.latest.default.override {
           targets = [ target ];
         };
 
-        # crossPkgs = import nixpkgs {
-        #   system = "x86_64-linux"; # Assuming you're building on x86_64
-        #   crossSystem = {
-        #     config = target;
-        #   };
-        #   overlays = [ (import rust-overlay) ];
-        # };
-        #
-        crossPkgs = pkgs.pkgsCross.aarch64-multiplatform;
+        rustPlatform = hostPkgs.makeRustPlatform {
+          cargo = rustToolchain;
+          rustc = rustToolchain;
+        };
 
       in {
-        packages.default = crossPkgs.stdenv.mkDerivation {
+        packages.default = rustPlatform.buildRustPackage {
           pname = "dashboard";
           version = "0.1.0";
-
           src = ./.;
 
-          nativeBuildInputs = with crossPkgs; [
+          nativeBuildInputs = [
+            hostPkgs.pkg-config
             rustToolchain
-            pkg-config
-            crossPkgs.stdenv.cc
+            crossPkgs.stdenv.cc  # provides aarch64-unknown-linux-gnu-gcc
           ];
 
           buildInputs = with crossPkgs; [
             openssl
           ];
 
-          CARGO_BUILD_TARGET = target;
+          cargoDeps = rustPlatform.importCargoLock {
+            lockFile = ./Cargo.lock;
+          };
 
+          cargoLock.lockFile = ./Cargo.lock;
+
+          # Prevent cargo from building a native binary by default
           buildPhase = ''
             cargo build --release --target ${target}
           '';
 
+          # Install only the cross-compiled binary
           installPhase = ''
             mkdir -p $out/bin
             cp target/${target}/release/dashboard $out/bin/
           '';
 
+          doCheck = false;
 
-          # Ensure the .cargo/config.toml exists
+          # Cross-compilation configuration for cargo
           postPatch = ''
             mkdir -p .cargo
             cat > .cargo/config.toml <<EOF
-          [target.aarch64-unknown-linux-gnu]
-          linker = "${crossPkgs.stdenv.cc.targetPrefix}gcc"
-          EOF
+[target.${target}]
+linker = "${crossPkgs.stdenv.cc.targetPrefix}gcc"
+EOF
           '';
         };
+
+        # Optional: Alias under the actual target system
+        packages.${target} = self.outputs.packages.${system}.default;
       });
 }
+
