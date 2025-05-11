@@ -6,17 +6,12 @@ use std::thread;
 use std::time::Duration;
 use slint::{ComponentHandle, SharedString};
 
-// Add this import for GPIO
-// use rppal::gpio::Gpio;
+
 
 slint::include_modules!();
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let window = Dashboard::new()?; // From the Slint DSL
-
-    // GPIO setup 
-    // let gpio = Gpio::new()?;
-    // let speed_pin = gpio.get(17)?.into_input();
 
     let ui_handle = window.as_weak();
     thread::spawn(move || {
