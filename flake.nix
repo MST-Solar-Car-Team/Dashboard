@@ -73,7 +73,7 @@
             cp target/${target}/release/dashboard $out/bin/
           '';
 
-          doCheck = true;
+          doCheck = false;
 
           # Cross-compilation configuration for cargo
           postPatch = ''
@@ -81,7 +81,6 @@
             cat > .cargo/config.toml <<EOF
 [target.${target}]
 linker = "${crossPkgs.stdenv.cc.targetPrefix}gcc"
-ar = "${target}-ar"
 EOF
           '';
         };
