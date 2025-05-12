@@ -28,7 +28,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let ui_handle = window.as_weak();
     thread::spawn(move || {
-        let mut speed = 0;
+        let mut speed= 0.0;
         let mut throttle = 0;
         loop {
             // Increment speed by 1 every second
@@ -63,7 +63,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                             // read_pedal_packet(&packet_full[..15]);
                             throttle = ((packet_full[2] as u16) << 8) | (packet_full[3] as u16);
                             println!("throttle: {}", throttle);
-                            //throttle = (1023 - throttle) * 100 / 1023;
+                            // Prevent underflow by casting to i32
+                            let throttle_val = (1023i32 - throttle as i32) * 100 / 1023;
+                            let throttle_val = throttle_val.clamp(0, 100);
+                            throttle = throttle_val as u16;
                             println!("new throttle: {}", throttle);
                             for _ in 0..15 {
                                 queue.pop_front();
@@ -73,10 +76,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                             let packet_full = queue.make_contiguous();
                             let packet_full = &packet_full[..15];
 
-                            speed = ((packet_full[5] as i32) << 24)
-                                | ((packet_full[6] as i32) << 16)
-                                | ((packet_full[7] as i32) << 8)
-                                | (packet_full[8] as i32);
+                            // Read 4 bytes as f32 (adjust endianness if needed)
+                            let speed_bytes = [
+                                packet_full[4],
+                                packet_full[5],
+                                packet_full[6],
+                                packet_full[7],
+                            ];
+                            let mut temp_speed = f32::from_be_bytes(speed_bytes); //rpm
+
+                            temp_speed = temp_speed * 64.4 * 60.0 / 63360.0; // mph
+
+                            // Truncate speed to integer (remove decimal part)
+                            speed = temp_speed.trunc();
 
                             for _ in 0..15 {
                                 queue.pop_front();
