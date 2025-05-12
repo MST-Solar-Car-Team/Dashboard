@@ -48,13 +48,16 @@
           src = ./.;
 
           nativeBuildInputs = [
+            crossPkgs.pkg-config
             hostPkgs.pkg-config
             rustToolchain
             crossPkgs.stdenv.cc  # provides aarch64-unknown-linux-gnu-gcc
+            hostPkgs.installShellFiles
           ];
 
           buildInputs = with crossPkgs; [
             # openssl
+            udev
           ];
 
           cargoDeps = rustPlatform.importCargoLock {
@@ -84,6 +87,17 @@
             linker = "${crossPkgs.stdenv.cc.targetPrefix}gcc"
             EOF
                       '';
+        };
+
+        devShells.${system}.aarch64 = hostPkgs.mkShell {
+          buildInputs = [
+            hostPkgs.cargo-aarch64
+            rustToolchain
+            hostPkgs.pkg-config
+            crossPkgs.stdenv.cc
+            hostPkgs.udev
+            hostPkgs.systemd.dev
+          ];
         };
 
         # Optional: Alias under the actual target system
