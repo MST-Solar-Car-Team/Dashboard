@@ -63,7 +63,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                             // read_pedal_packet(&packet_full[..15]);
                             throttle = ((packet_full[2] as u16) << 8) | (packet_full[3] as u16);
                             println!("throttle: {}", throttle);
-                            throttle = (1023 - throttle) * 100 / 1023;
+                            //throttle = (1023 - throttle) * 100 / 1023;
                             println!("new throttle: {}", throttle);
                             for _ in 0..15 {
                                 queue.pop_front();
@@ -77,8 +77,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                                 | ((packet_full[6] as i32) << 16)
                                 | ((packet_full[7] as i32) << 8)
                                 | (packet_full[8] as i32);
+
+                            for _ in 0..15 {
+                                queue.pop_front();
+                            }
                         }
-                        _ => println!("Packet tossed yo"),
+                        _ => println!("Packet tossed yo: {:#04X?}", packet_id),
                     }
                 }
             }
