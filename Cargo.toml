@@ -1,5 +1,5 @@
 [package]
-name = "slint-rust-template"
+name = "dashboard"
 version = "0.1.0"
 edition = "2024"
 
@@ -11,3 +11,6 @@ serialport = "4.7.1"
 
 [build-dependencies]
 slint-build = "1.8.0"
+
+[target.aarch64-unknown-linux-gnu]
+linker = "aarch64-buildroot-linux-gnu-gcc"

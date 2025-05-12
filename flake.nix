@@ -89,15 +89,30 @@
                       '';
         };
 
-        devShells.${system}.aarch64 = hostPkgs.mkShell {
-          buildInputs = [
-            hostPkgs.cargo-aarch64
-            rustToolchain
+        devShells.${system}.default = hostPkgs.mkShell {
+
+          nativeBuildInputs = [
+            crossPkgs.pkg-config
             hostPkgs.pkg-config
-            crossPkgs.stdenv.cc
-            hostPkgs.udev
-            hostPkgs.systemd.dev
+            rustToolchain
+            crossPkgs.stdenv.cc  # provides aarch64-unknown-linux-gnu-gcc
+            hostPkgs.installShellFiles
           ];
+
+          buildInputs = with crossPkgs; [
+            # openssl
+            udev
+          ];
+
+          shellHook = ''
+            mkdir -p .cargo
+            cat > .cargo/config.toml <<EOF
+            [target.${target}]
+            linker = "${crossPkgs.stdenv.cc.targetPrefix}gcc"
+            EOF
+                      '';
+          
+
         };
 
         # Optional: Alias under the actual target system
