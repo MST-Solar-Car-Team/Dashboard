@@ -1,13 +1,11 @@
 // Prevent console window in addition to Slint window in Windows release builds when, e.g., starting the app via file manager. Ignored on other platforms.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use slint::{ComponentHandle, SharedString};
+use std::collections::VecDeque;
 use std::error::Error;
 use std::thread;
 use std::time::Duration;
-use slint::{ComponentHandle, SharedString};
-use std::collections::VecDeque;
-
-
 
 slint::include_modules!();
 
@@ -20,7 +18,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .next()
         .expect("No serial ports found");
     let mut ports = serialport::new(port_info.port_name, 115200)
-        .timeout(Duration::from_millis(50))
+        // .timeout(Duration::from_millis(0))
         .open()
         .expect("Failed to open serial port!");
 
@@ -34,7 +32,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let mut throttle = 0;
         loop {
             // Increment speed by 1 every second
-            speed = (speed + 1) % 121;
+            //speed = (speed + 1) % 121;
 
             let left_on = false;
             let right_on = true;
@@ -43,8 +41,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let temp_bms = 32;
             let temp_motor = 45;
             let temp_controller = 38;
-
-            
 
             // println!("loops");
             match ports.read(serial_buf.as_mut_slice()) {
@@ -60,26 +56,36 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let packet_byte = queue.pop_front();
 
                 if let Some(packet_id) = packet_byte {
-                    if packet_id == 0x13 {
-                        let packet_full = queue.make_contiguous();
-                        let packet_full = &packet_full[..15];
-                        // read_pedal_packet(&packet_full[..15]);
-                        throttle = ((packet_full[2] as u16) << 8) | (packet_full[3] as u16);
-                        println!("throttle: {}", throttle);
-                        throttle = (1023-throttle) * 100 / 1023;
-                        println!("new throttle: {}", throttle);
-                        for i in 0..15 {
-                            queue.pop_front();
+                    match packet_id {
+                        0x13 => {
+                            let packet_full = queue.make_contiguous();
+                            let packet_full = &packet_full[..15];
+                            // read_pedal_packet(&packet_full[..15]);
+                            throttle = ((packet_full[2] as u16) << 8) | (packet_full[3] as u16);
+                            println!("throttle: {}", throttle);
+                            throttle = (1023 - throttle) * 100 / 1023;
+                            println!("new throttle: {}", throttle);
+                            for _ in 0..15 {
+                                queue.pop_front();
+                            }
                         }
-                    } else {
-                        println!("Packet tossed yo")
+                        0x03 => {
+                            let packet_full = queue.make_contiguous();
+                            let packet_full = &packet_full[..15];
+
+                            speed = ((packet_full[5] as i32) << 24)
+                                | ((packet_full[6] as i32) << 16)
+                                | ((packet_full[7] as i32) << 8)
+                                | (packet_full[8] as i32);
+                        }
+                        _ => println!("Packet tossed yo"),
                     }
                 }
             }
 
             // Update UI on the event loop
             let _ = ui_handle.upgrade_in_event_loop(move |window| {
-                window.set_speed(speed);
+                window.set_speed(speed as f32);
                 window.set_leftBlinkerOn(left_on);
                 window.set_rightBlinkerOn(right_on);
                 window.set_voltage(voltage);
