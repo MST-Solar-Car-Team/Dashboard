@@ -26,6 +26,7 @@
           system = system;
           crossSystem = {
             config = "aarch64-unknown-linux-gnu";
+            rustc.config = "aarch64-unknown-linux-gnu";
           };
         };
 
@@ -35,7 +36,7 @@
           targets = [ target ];
         };
 
-        rustPlatform = hostPkgs.makeRustPlatform {
+        rustPlatform = crossPkgs.makeRustPlatform {
           cargo = rustToolchain;
           rustc = rustToolchain;
         };
@@ -53,7 +54,7 @@
           ];
 
           buildInputs = with crossPkgs; [
-            openssl
+            # openssl
           ];
 
           cargoDeps = rustPlatform.importCargoLock {
@@ -79,10 +80,10 @@
           postPatch = ''
             mkdir -p .cargo
             cat > .cargo/config.toml <<EOF
-[target.${target}]
-linker = "${crossPkgs.stdenv.cc.targetPrefix}gcc"
-EOF
-          '';
+            [target.${target}]
+            linker = "${crossPkgs.stdenv.cc.targetPrefix}gcc"
+            EOF
+                      '';
         };
 
         # Optional: Alias under the actual target system
