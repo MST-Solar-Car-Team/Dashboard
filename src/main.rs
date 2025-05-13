@@ -1,12 +1,12 @@
 // Prevent console window in addition to Slint window in Windows release builds when, e.g., starting the app via file manager. Ignored on other platforms.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use slint::{ComponentHandle, SharedString};
-use std::collections::VecDeque;
-use std::error::Error;
-use std::thread;
-use std::time::Duration;
+mod serial;
 
+use crate::serial::packets::{PedalPacket, SpeedPacket};
+use slint::ComponentHandle;
+use std::collections::VecDeque;
+use std::thread;
 slint::include_modules!();
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -25,31 +25,25 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Circular buff implmentation would be nice at some point
     let mut queue: VecDeque<u8> = VecDeque::new();
     let mut serial_buf: Vec<u8> = vec![0; 32];
-
     let ui_handle = window.as_weak();
     thread::spawn(move || {
-        let mut speed= 0.0;
+        let mut speed = 0.0;
         let mut throttle = 0;
         loop {
-            // Increment speed by 1 every second
-            //speed = (speed + 1) % 121;
-
             let left_on = false;
             let right_on = true;
             let voltage = 52.3;
-            // let mut throttle: u16;
             let temp_bms = 32;
             let temp_motor = 45;
             let temp_controller = 38;
 
-            // println!("loops");
             match ports.read(serial_buf.as_mut_slice()) {
                 Ok(t) => {
                     for item in &serial_buf[..t] {
                         queue.push_back(item.to_owned());
                     }
                 }
-                Err(e) => print!(""),
+                Err(_) => print!(""),
             }
 
             while queue.len() > 16 {
@@ -58,41 +52,28 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 if let Some(packet_id) = packet_byte {
                     match packet_id {
                         0x13 => {
-                            let packet_full = queue.make_contiguous();
-                            let packet_full = &packet_full[..15];
-                            // read_pedal_packet(&packet_full[..15]);
-                            throttle = ((packet_full[2] as u16) << 8) | (packet_full[3] as u16);
-                            println!("throttle: {}", throttle);
-                            // Prevent underflow by casting to i32
-                            let throttle_val = (1023i32 - throttle as i32) * 100 / 1023;
-                            let throttle_val = throttle_val.clamp(0, 100);
-                            throttle = throttle_val as u16;
-                            println!("new throttle: {}", throttle);
-                            for _ in 0..15 {
-                                queue.pop_front();
-                            }
+                            let pedal_packet = PedalPacket::from_bytes(&[
+                                queue[0], queue[1], queue[2], queue[3], queue[4], queue[5],
+                                queue[6], queue[7], queue[8], queue[9], queue[10], queue[11],
+                                queue[12], queue[13], queue[14],
+                            ])
+                            .unwrap();
+
+                            throttle = pedal_packet.get_throttle_percentage();
+
+                            queue.drain(0..15);
                         }
                         0x03 => {
-                            let packet_full = queue.make_contiguous();
-                            let packet_full = &packet_full[..15];
+                            let pedal_packet = SpeedPacket::from_bytes(&[
+                                queue[0], queue[1], queue[2], queue[3], queue[4], queue[5],
+                                queue[6], queue[7], queue[8], queue[9], queue[10], queue[11],
+                                queue[12], queue[13], queue[14],
+                            ])
+                            .unwrap();
 
-                            // Read 4 bytes as f32 (adjust endianness if needed)
-                            let speed_bytes = [
-                                packet_full[4],
-                                packet_full[5],
-                                packet_full[6],
-                                packet_full[7],
-                            ];
-                            let mut temp_speed = f32::from_be_bytes(speed_bytes); //rpm
+                            speed = pedal_packet.to_mph().trunc();
 
-                            temp_speed = temp_speed * 64.4 * 60.0 / 63360.0; // mph
-
-                            // Truncate speed to integer (remove decimal part)
-                            speed = temp_speed.trunc();
-
-                            for _ in 0..15 {
-                                queue.pop_front();
-                            }
+                            queue.drain(0..15);
                         }
                         _ => println!("Packet tossed yo: {:#04X?}", packet_id),
                     }
@@ -110,17 +91,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 window.set_tempMotor(temp_motor);
                 window.set_tempController(temp_controller);
             });
-            // thread::sleep(Duration::from_secs(1));
         }
     });
 
-    window.run();
+    _ = window.run();
     Ok(())
-}
-
-fn read_pedal_packet(data: &[u8]) {
-    let baseline: u16 = ((data[0] as u16) << 8) | (data[1] as u16);
-    let pedal: u16 = ((data[2] as u16) << 8) | (data[3] as u16);
-
-    println!("baseline: {} pedal: {}", baseline, pedal);
 }
