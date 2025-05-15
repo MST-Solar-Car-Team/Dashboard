@@ -4,10 +4,20 @@
 mod serial;
 
 use crate::serial::packets::{PedalPacket, SpeedPacket};
+use serialport::SerialPort;
 use slint::ComponentHandle;
 use std::collections::VecDeque;
+use std::io::ErrorKind;
 use std::thread;
+use std::time::Duration;
 slint::include_modules!();
+
+fn make_connection(port_name: &String) -> Box<dyn SerialPort> {
+    serialport::new(port_name, 115200)
+        .timeout(Duration::from_millis(50))
+        .open()
+        .expect("Failed to open serial port!")
+}
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let window = Dashboard::new()?; // From the Slint DSL
@@ -17,11 +27,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .into_iter()
         .next()
         .expect("No serial ports found");
-    let mut ports = serialport::new(port_info.port_name, 115200)
-        // .timeout(Duration::from_millis(0))
-        .open()
-        .expect("Failed to open serial port!");
-
+    let mut ports = make_connection(&port_info.port_name);
     // Circular buff implmentation would be nice at some point
     let mut queue: VecDeque<u8> = VecDeque::new();
     let mut serial_buf: Vec<u8> = vec![0; 32];
@@ -43,7 +49,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         queue.push_back(item.to_owned());
                     }
                 }
-                Err(_) => print!(""),
+                Err(e) => {
+                    if e.kind() == ErrorKind::BrokenPipe {
+                        ports = make_connection(&port_info.port_name);
+                        println!("Recovered port!");
+                    }
+                    println!("Random Error: {}", e);
+                }
             }
 
             while queue.len() > 16 {
