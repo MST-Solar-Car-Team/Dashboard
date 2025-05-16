@@ -1,0 +1,129 @@
+import { Button, VerticalBox, Spinner, ProgressIndicator } from "std-widgets.slint";
+
+export component Dashboard inherits Window {
+    max-width: 1920px;
+    max-height: 1080px;
+    full-screen: false;
+    HorizontalLayout {
+        VerticalLayout {
+            alignment: center;
+            spacing: 10px;
+            padding: 15px;
+
+            Text {
+                horizontal-alignment: TextHorizontalAlignment.center;
+                text: "Voltage: " + root.voltage + " V";
+                font-size: 20px;
+            }
+
+            Text {
+                text: "BMS: " + root.tempBMS + " °C";
+                font-size: 20px;
+                horizontal-alignment: TextHorizontalAlignment.center;
+            }
+
+            Text {
+                text: "Motor: " + root.tempMotor + " °C";
+                font-size: 20px;
+                horizontal-alignment: TextHorizontalAlignment.center;
+            }
+
+            Text {
+                text: "Controller: " + root.tempController + " °C";
+                font-size: 20px;
+                horizontal-alignment: TextHorizontalAlignment.center;
+            }
+
+            Text {
+                text: "Controller: " + root.tempController + " °C";
+                font-size: 20px;
+                horizontal-alignment: TextHorizontalAlignment.center;
+            }
+        }
+
+        VerticalLayout {
+            alignment: center;
+            padding: 50px;
+
+            HorizontalLayout {
+                alignment: space-between;
+
+                Rectangle {
+                    width: 50px;
+                    height: 50px;
+                    background: root.leftBlinkerOn ? #ffff00 : #808080;
+                }
+
+                Rectangle {
+                    width: 50px;
+                    height: 50px;
+                    background: root.rightBlinkerOn ? #ffff00 : #808080;
+                }
+            }
+
+            Text {
+                text: root.speed;
+                font-size: 144px;
+                horizontal-alignment: center;
+            }
+
+            Text {
+                text: "mph";
+                font-size: 100px;
+                horizontal-alignment: center;
+            }
+
+            Text {
+                text: root.errorOut;
+                font-size: 20px;
+                color: #ff0000;
+                horizontal-alignment: center;
+            }
+        }
+
+        VerticalLayout {
+            padding: 50px;
+            alignment: center;
+
+            Rectangle {
+                width: 300px;
+                height: 90px;
+                Rectangle {
+                    width: 400px;
+                    height: 50px;
+                    Text {
+                        text: "Throttle: " + root.throttle + " %";
+                        font-size: 35px;
+                    }
+                }
+
+                Rectangle {
+                    y: 70px;
+                    width: 300px;
+                    height: 40px;
+                    background: #cccccc;
+                    Rectangle {
+                        width: parent.width * (root.throttle / 100);
+                        height: parent.height;
+                        background: #4caf50;
+                    }
+
+                    border-radius: 5px;
+                    border-width: 1px;
+                    clip: false;
+                    border-color: #888888;
+                }
+            }
+        }
+    }
+
+    in property <float> speed;
+    in property <float> voltage;
+    in property <bool> leftBlinkerOn;
+    in property <bool> rightBlinkerOn;
+    in property <int> throttle;
+    in property <int> tempBMS;
+    in property <int> tempMotor;
+    in property <int> tempController;
+    in property <string> errorOut;
+}

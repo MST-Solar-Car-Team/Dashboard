@@ -6,7 +6,7 @@ mod serial;
 use crate::serial::packets::{PedalPacket, VelocityPacket};
 use serial::packets::LightsPacket;
 use serialport::SerialPort;
-use slint::ComponentHandle;
+use slint::{ComponentHandle, SharedString, ToSharedString};
 use std::collections::VecDeque;
 use std::io::ErrorKind;
 use std::thread;
@@ -58,6 +58,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let temp_bms = 32;
             let temp_motor = 45;
             let temp_controller = 38;
+            let mut error_out: SharedString = "".to_shared_string();
 
             match port.read(serial_buf.as_mut_slice()) {
                 Ok(t) => {
@@ -131,6 +132,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 window.set_tempBMS(temp_bms);
                 window.set_tempMotor(temp_motor);
                 window.set_tempController(temp_controller);
+                window.set_errorOut(error_out);
             });
         }
     });
