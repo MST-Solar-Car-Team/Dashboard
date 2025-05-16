@@ -12,24 +12,31 @@ use std::thread;
 use std::time::Duration;
 slint::include_modules!();
 
-fn make_connection(port_name: &String) -> Box<dyn SerialPort> {
-    serialport::new(port_name, 115200)
-        .timeout(Duration::from_millis(50))
-        .open()
-        .expect("Failed to open serial port!")
+fn make_connection() -> Box<dyn SerialPort> {
+    loop {
+        let serial_port_info = serialport::available_ports().unwrap().into_iter().next();
+
+        if serial_port_info.is_some() {
+            let serial_port_info = serial_port_info.unwrap();
+
+            let port = serialport::new(serial_port_info.port_name, 9600)
+                .timeout(Duration::from_millis(50))
+                .open();
+
+            if port.is_ok() {
+                return port.unwrap();
+            }
+        }
+
+        println!("port not found, trying again");
+        thread::sleep(Duration::from_millis(50));
+    }
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let window = Dashboard::new()?; // From the Slint DSL 
 
-    // Find the first available serial port and use it
-    let serial_port_name = serialport::available_ports()?
-        .into_iter()
-        .next()
-        .expect("No serial ports found")
-        .port_name;
-
-    let mut ports = make_connection(&serial_port_name);
+    let mut port = make_connection();
     // Circular buff implmentation would be nice at some point
     let mut queue: VecDeque<u8> = VecDeque::new();
     let mut serial_buf: Vec<u8> = vec![0; 32];
@@ -39,13 +46,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let mut throttle = 0;
         loop {
             let left_on = false;
-            let right_on = true;
+            let right_on = false;
             let voltage = 52.3;
             let temp_bms = 32;
             let temp_motor = 45;
             let temp_controller = 38;
 
-            match ports.read(serial_buf.as_mut_slice()) {
+            match port.read(serial_buf.as_mut_slice()) {
                 Ok(t) => {
                     for item in &serial_buf[..t] {
                         queue.push_back(item.to_owned());
@@ -53,7 +60,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
                 Err(e) => {
                     if e.kind() == ErrorKind::BrokenPipe {
-                        ports = make_connection(&serial_port_name);
+                        port = make_connection();
                         println!("Recovered port!");
                     }
                     println!("Random Error: {}", e);

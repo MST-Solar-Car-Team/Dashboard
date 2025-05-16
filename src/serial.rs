@@ -36,7 +36,6 @@ pub mod packets {
             let pedal_value = (self.pedal_value as u32).clamp(PedalPacket::FLOORVALUE as u32, 1023)
                 - PedalPacket::FLOORVALUE as u32;
             let throttle: u32 = 100 - ((pedal_value as u32 * 100) / PedalPacket::UPPERVALUE as u32);
-            println! {"Peddal : {}", pedal_value}
             throttle.clamp(0, 100) as u8
         }
     }
