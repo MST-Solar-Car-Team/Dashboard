@@ -3,7 +3,8 @@
 
 mod serial;
 
-use crate::serial::packets::{PedalPacket, SpeedPacket};
+use crate::serial::packets::{PedalPacket, VelocityPacket};
+use serial::packets::LightsPacket;
 use serialport::SerialPort;
 use slint::ComponentHandle;
 use std::collections::VecDeque;
@@ -11,6 +12,11 @@ use std::io::ErrorKind;
 use std::thread;
 use std::time::Duration;
 slint::include_modules!();
+
+const CAN_PACKET_ID: u8 = 0x01;
+const LIGHTS_PACKET_ID: u8 = 0x02;
+const VELOCITY_PACKET_ID: u8 = 0x03;
+const PEDAL_PACKET_ID: u8 = 0x04;
 
 fn make_connection() -> Box<dyn SerialPort> {
     loop {
@@ -44,9 +50,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     thread::spawn(move || {
         let mut speed = 0.0;
         let mut throttle = 0;
+        let mut left_on = false;
+        let mut right_on = false;
+
         loop {
-            let left_on = false;
-            let right_on = false;
             let voltage = 52.3;
             let temp_bms = 32;
             let temp_motor = 45;
@@ -72,7 +79,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 if let Some(packet_id) = packet_byte {
                     match packet_id {
-                        0x13 => {
+                        PEDAL_PACKET_ID => {
                             let pedal_packet = PedalPacket::from_bytes(&[
                                 queue[0], queue[1], queue[2], queue[3], queue[4], queue[5],
                                 queue[6], queue[7], queue[8], queue[9], queue[10], queue[11],
@@ -84,8 +91,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                             queue.drain(0..15);
                         }
-                        0x03 => {
-                            let pedal_packet = SpeedPacket::from_bytes(&[
+                        VELOCITY_PACKET_ID => {
+                            let pedal_packet = VelocityPacket::from_bytes(&[
                                 queue[0], queue[1], queue[2], queue[3], queue[4], queue[5],
                                 queue[6], queue[7], queue[8], queue[9], queue[10], queue[11],
                                 queue[12], queue[13], queue[14],
@@ -93,6 +100,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                             .unwrap();
 
                             speed = pedal_packet.to_mph().trunc();
+
+                            queue.drain(0..15);
+                        }
+                        LIGHTS_PACKET_ID => {
+                            let lights_packet = LightsPacket::from_bytes(&[
+                                queue[0], queue[1], queue[2], queue[3], queue[4], queue[5],
+                                queue[6], queue[7], queue[8], queue[9], queue[10], queue[11],
+                                queue[12], queue[13], queue[14],
+                            ])
+                            .unwrap();
+
+                            left_on = lights_packet.left_blinkers;
+                            right_on = lights_packet.right_blinkers;
 
                             queue.drain(0..15);
                         }

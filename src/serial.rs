@@ -4,6 +4,9 @@ pub mod packets {
     #[derive(Debug, Clone)]
     pub struct PacketChecksumError;
 
+    fn to_bool(num: u8) -> bool {
+        num != 0
+    }
     impl fmt::Display for PacketChecksumError {
         fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
             write!(f, "packet checksum failed, probably corrupte")
@@ -11,8 +14,8 @@ pub mod packets {
     }
 
     pub struct PedalPacket {
-        pedal_value: u16,
-        baseline_value: u16,
+        pub pedal_value: u16,
+        pub baseline_value: u16,
     }
 
     impl PedalPacket {
@@ -40,21 +43,46 @@ pub mod packets {
         }
     }
 
-    pub struct SpeedPacket {
-        rpm: f32,
+    pub struct VelocityPacket {
+        pub rpm: f32,
     }
 
-    impl SpeedPacket {
-        pub fn from_bytes(bytes: &[u8; 15]) -> Result<SpeedPacket, PacketChecksumError> {
+    impl VelocityPacket {
+        pub fn from_bytes(bytes: &[u8; 15]) -> Result<VelocityPacket, PacketChecksumError> {
             let rpm = f32::from_be_bytes([bytes[4], bytes[5], bytes[6], bytes[7]]);
 
             //TODO implement checksum
 
-            Ok(SpeedPacket { rpm })
+            Ok(VelocityPacket { rpm })
         }
 
         pub fn to_mph(self) -> f32 {
             self.rpm * 69.3 * 60.0 / 63360.0
+        }
+    }
+
+    pub struct LightsPacket {
+        pub headlights: bool,
+        pub right_blinkers: bool,
+        pub left_blinkers: bool,
+        pub brake_lights: bool,
+    }
+
+    impl LightsPacket {
+        pub fn from_bytes(bytes: &[u8; 15]) -> Result<LightsPacket, PacketChecksumError> {
+            let headlights: bool = to_bool(bytes[0]);
+            let right_blinkers: bool = to_bool(bytes[1]);
+            let left_blinkers: bool = to_bool(bytes[2]);
+            let brake_lights: bool = to_bool(bytes[3]);
+
+            //TODO implment checksum
+
+            Ok(LightsPacket {
+                headlights,
+                right_blinkers,
+                left_blinkers,
+                brake_lights,
+            })
         }
     }
 }
