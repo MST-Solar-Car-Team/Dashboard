@@ -20,14 +20,16 @@ fn make_connection(port_name: &String) -> Box<dyn SerialPort> {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let window = Dashboard::new()?; // From the Slint DSL
-    // println!("fuck you");
+    let window = Dashboard::new()?; // From the Slint DSL 
+
     // Find the first available serial port and use it
-    let port_info = serialport::available_ports()?
+    let serial_port_name = serialport::available_ports()?
         .into_iter()
         .next()
-        .expect("No serial ports found");
-    let mut ports = make_connection(&port_info.port_name);
+        .expect("No serial ports found")
+        .port_name;
+
+    let mut ports = make_connection(&serial_port_name);
     // Circular buff implmentation would be nice at some point
     let mut queue: VecDeque<u8> = VecDeque::new();
     let mut serial_buf: Vec<u8> = vec![0; 32];
@@ -51,7 +53,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
                 Err(e) => {
                     if e.kind() == ErrorKind::BrokenPipe {
-                        ports = make_connection(&port_info.port_name);
+                        ports = make_connection(&serial_port_name);
                         println!("Recovered port!");
                     }
                     println!("Random Error: {}", e);
