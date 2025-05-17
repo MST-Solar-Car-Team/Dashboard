@@ -9,13 +9,6 @@ export component Dashboard inherits Window {
         VerticalLayout {
             alignment: center;
             spacing: 10px;
-            padding: 15px;
-
-            Text {
-                horizontal-alignment: TextHorizontalAlignment.center;
-                text: "Voltage: " + root.voltage + " V";
-                font-size: 20px;
-            }
 
             Text {
                 text: "BMS: " + root.tempBMS + " °C";
@@ -30,14 +23,22 @@ export component Dashboard inherits Window {
             }
 
             Text {
-                text: "Controller: " + root.tempController + " °C";
+                text: "limitId: " + root.limitId;
                 font-size: 20px;
                 horizontal-alignment: TextHorizontalAlignment.center;
             }
 
+            // Tempature readout for controller is broken rn
+            // Text {
+            //     text: "Controller: " + root.tempController + " °C";
+            //     font-size: 20px;
+            //     horizontal-alignment: TextHorizontalAlignment.center;
+            // }
+
             Text {
-                text: "Controller: " + root.tempController + " °C";
+                text: "Headlights: " + (root.headlightsOn ? "On" : "Off");
                 font-size: 20px;
+                color: root.headlightsOn ? blue : black;
                 horizontal-alignment: TextHorizontalAlignment.center;
             }
         }
@@ -80,6 +81,13 @@ export component Dashboard inherits Window {
                 color: #ff0000;
                 horizontal-alignment: center;
             }
+
+            for item in root.limitFlags: Text {
+                text: "Limit: " + item;
+                font-size: 20px;
+                color: blue;
+                horizontal-alignment: center;
+            }
         }
 
         VerticalLayout {
@@ -119,12 +127,13 @@ export component Dashboard inherits Window {
     }
 
     in property <float> speed;
-    in property <float> voltage;
     in property <bool> leftBlinkerOn;
     in property <bool> rightBlinkerOn;
+    in property <bool> headlightsOn;
     in property <int> throttle;
     in property <int> tempBMS;
-    in property <int> tempMotor;
-    in property <int> tempController;
+    in property <int> limitId;
+    in property <float> tempMotor;
     in property <string> errorOut;
+    in property <[string]> limitFlags;
 }

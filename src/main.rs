@@ -4,7 +4,7 @@
 mod serial;
 
 use crate::serial::packets::{PedalPacket, VelocityPacket};
-use serial::packets::LightsPacket;
+use serial::packets::{LightsPacket, MotorStatusPacket, MotorTempaturePacket};
 use serialport::SerialPort;
 use slint::{ComponentHandle, SharedString, ToSharedString};
 use std::collections::VecDeque;
@@ -17,6 +17,8 @@ const CAN_PACKET_ID: u8 = 0x01;
 const LIGHTS_PACKET_ID: u8 = 0x02;
 const VELOCITY_PACKET_ID: u8 = 0x03;
 const PEDAL_PACKET_ID: u8 = 0x04;
+const MOTOR_TEMPATURE_PACKET_ID: u8 = 0x05;
+const MOTOR_STATUS_PACKET_ID: u8 = 0x06;
 
 fn make_connection() -> Box<dyn SerialPort> {
     loop {
@@ -50,15 +52,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     thread::spawn(move || {
         let mut speed = 0.0;
         let mut throttle = 0;
+        let mut headlights_on = false;
         let mut left_on = false;
         let mut right_on = false;
+        let mut temp_motor = 0.0;
+        let mut limit_code: u16 = 0;
+        let mut error_out: SharedString = "".to_shared_string();
 
         loop {
-            let voltage = 52.3;
-            let temp_bms = 32;
-            let temp_motor = 45;
-            let temp_controller = 38;
-            let mut error_out: SharedString = "".to_shared_string();
+            let temp_bms = 0;
+            //let mut error_out: SharedString = "".to_shared_string();
 
             match port.read(serial_buf.as_mut_slice()) {
                 Ok(t) => {
@@ -81,58 +84,91 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 if let Some(packet_id) = packet_byte {
                     match packet_id {
                         PEDAL_PACKET_ID => {
-                            let pedal_packet = PedalPacket::from_bytes(&[
+                            if let Ok(pedal_packet) = PedalPacket::from_bytes(&[
                                 queue[0], queue[1], queue[2], queue[3], queue[4], queue[5],
                                 queue[6], queue[7], queue[8], queue[9], queue[10], queue[11],
                                 queue[12], queue[13], queue[14],
-                            ])
-                            .unwrap();
+                            ]) {
+                                throttle = pedal_packet.get_throttle_percentage();
 
-                            throttle = pedal_packet.get_throttle_percentage();
+                                if (pedal_packet.baseline_value
+                                    < (pedal_packet.pedal_value.clamp(50, 1023) - 50))
+                                    || (pedal_packet.pedal_value < 475)
+                                {
+                                    error_out =
+                                        "Warning: Recent pedal fault detected!".to_shared_string();
+                                }
 
-                            queue.drain(0..15);
+                                queue.drain(0..15);
+                            }
                         }
                         VELOCITY_PACKET_ID => {
-                            let pedal_packet = VelocityPacket::from_bytes(&[
+                            if let Ok(velocity_packet) = VelocityPacket::from_bytes(&[
                                 queue[0], queue[1], queue[2], queue[3], queue[4], queue[5],
                                 queue[6], queue[7], queue[8], queue[9], queue[10], queue[11],
                                 queue[12], queue[13], queue[14],
-                            ])
-                            .unwrap();
+                            ]) {
+                                speed = velocity_packet.to_mph().trunc();
 
-                            speed = pedal_packet.to_mph().trunc();
-
-                            queue.drain(0..15);
+                                queue.drain(0..15);
+                            }
                         }
                         LIGHTS_PACKET_ID => {
-                            let lights_packet = LightsPacket::from_bytes(&[
+                            if let Ok(lights_packet) = LightsPacket::from_bytes(&[
                                 queue[0], queue[1], queue[2], queue[3], queue[4], queue[5],
                                 queue[6], queue[7], queue[8], queue[9], queue[10], queue[11],
                                 queue[12], queue[13], queue[14],
-                            ])
-                            .unwrap();
+                            ]) {
+                                left_on = lights_packet.left_blinkers;
+                                right_on = lights_packet.right_blinkers;
+                                headlights_on = lights_packet.headlights;
 
-                            left_on = lights_packet.left_blinkers;
-                            right_on = lights_packet.right_blinkers;
-
-                            queue.drain(0..15);
+                                queue.drain(0..15);
+                            }
                         }
-                        _ => println!("Packet tossed yo: {:#04X?}", packet_id),
+                        MOTOR_TEMPATURE_PACKET_ID => {
+                            if let Ok(motor_temp_packet) = MotorTempaturePacket::from_bytes(&[
+                                queue[0], queue[1], queue[2], queue[3], queue[4], queue[5],
+                                queue[6], queue[7], queue[8], queue[9], queue[10], queue[11],
+                                queue[12], queue[13], queue[14],
+                            ]) {
+                                temp_motor = motor_temp_packet.motor_temp;
+                            }
+                        }
+                        MOTOR_STATUS_PACKET_ID => {
+                            if let Ok(motor_status_packet) = MotorStatusPacket::from_bytes(&[
+                                queue[0], queue[1], queue[2], queue[3], queue[4], queue[5],
+                                queue[6], queue[7], queue[8], queue[9], queue[10], queue[11],
+                                queue[12], queue[13], queue[14],
+                            ]) {
+                                limit_code = motor_status_packet.limit_flags;
+                                if motor_status_packet.error_flags != 0 {
+                                    error_out = format!(
+                                        "Warning: Error code {}",
+                                        motor_status_packet.error_flags
+                                    )
+                                    .to_shared_string();
+                                }
+                            }
+                        }
+                        _ => print!(""), //println!("Packet tossed yo: {:#04X?}", packet_id),
                     }
                 }
             }
+
+            let warning = error_out.clone();
 
             // Update UI on the event loop
             let _ = ui_handle.upgrade_in_event_loop(move |window| {
                 window.set_speed(speed as f32);
                 window.set_leftBlinkerOn(left_on);
                 window.set_rightBlinkerOn(right_on);
-                window.set_voltage(voltage);
                 window.set_throttle(throttle as i32);
                 window.set_tempBMS(temp_bms);
                 window.set_tempMotor(temp_motor);
-                window.set_tempController(temp_controller);
-                window.set_errorOut(error_out);
+                window.set_headlightsOn(headlights_on);
+                window.set_limitId(limit_code as i32);
+                window.set_errorOut(warning);
             });
         }
     });
