@@ -89,31 +89,31 @@
                       '';
         };
 
-        devShells.${system}.default = hostPkgs.mkShell {
+        # devShells.${system}.default = hostPkgs.mkShell {
 
-          nativeBuildInputs = [
-            crossPkgs.pkg-config
-            hostPkgs.pkg-config
-            rustToolchain
-            crossPkgs.stdenv.cc  # provides aarch64-unknown-linux-gnu-gcc
-            hostPkgs.installShellFiles
-          ];
+        #   nativeBuildInputs = [
+        #     crossPkgs.pkg-config
+        #     hostPkgs.pkg-config
+        #     rustToolchain
+        #     crossPkgs.stdenv.cc  # provides aarch64-unknown-linux-gnu-gcc
+        #     hostPkgs.installShellFiles
+        #   ];
 
-          buildInputs = with crossPkgs; [
-            # openssl
-            udev
-          ];
+        #   buildInputs = with crossPkgs; [
+        #     # openssl
+        #     udev
+        #   ];
 
-          shellHook = ''
-            mkdir -p .cargo
-            cat > .cargo/config.toml <<EOF
-            [target.${target}]
-            linker = "${crossPkgs.stdenv.cc.targetPrefix}gcc"
-            EOF
-                      '';
+        #   shellHook = ''
+        #     mkdir -p .cargo
+        #     cat > .cargo/config.toml <<EOF
+        #     [target.${target}]
+        #     linker = "${crossPkgs.stdenv.cc.targetPrefix}gcc"
+        #     EOF
+        #               '';
           
 
-        };
+        # };
 
         # Optional: Alias under the actual target system
         packages.${target} = self.outputs.packages.${system}.default;
