@@ -2,7 +2,7 @@
   description = "Cross-compiling a Rust project to aarch64-linux";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.05";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.05";
     flake-utils.url = "github:numtide/flake-utils";
     rust-overlay = {
       url = "github:oxalica/rust-overlay";
@@ -73,7 +73,7 @@
           postFixup = ''
             patchelf $out/bin/dashboard \
               --add-rpath ${
-                flake-utils.lib.makeLibraryPath [
+                hostPkgs.lib.makeLibraryPath [
                   crossPkgs.fontconfig
                   crossPkgs.libGL
                 ]
