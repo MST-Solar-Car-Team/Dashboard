@@ -55,10 +55,30 @@
             hostPkgs.installShellFiles
           ];
 
+
           buildInputs = with crossPkgs; [
-            # openssl
+            libgit2
+            openssl
             udev
-          ];
+            expat
+            fontconfig
+            libGL
+            xorg.libX11
+            xorg.libXcursor
+            xorg.libXi
+            xorg.libXrandr
+            xorg.libxcb
+            ];
+
+          postFixup = ''
+            patchelf $out/bin/dashboard \
+              --add-rpath ${
+                flake-utils.lib.makeLibraryPath [
+                  crossPkgs.fontconfig
+                  crossPkgs.libGL
+                ]
+              }
+          '';
 
           cargoDeps = rustPlatform.importCargoLock {
             lockFile = ./Cargo.lock;
