@@ -17,7 +17,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .into_iter()
         .next()
         .expect("No serial ports found");
-    let mut ports = serialport::new("/dev/ttyS1", 115200)
+    let mut ports = serialport::new(port_info.port_name, 115200)
         // .timeout(Duration::from_millis(0))
         .open()
         .expect("Failed to open serial port!");
