@@ -5,7 +5,7 @@ mod serial;
 
 use crate::serial::packets::{PedalPacket, VelocityPacket};
 use serial::packets::{LightsPacket, MotorStatusPacket, MotorTempaturePacket};
-use serialport::SerialPort;
+use serialport::{Error, SerialPort};
 use slint::{ComponentHandle, SharedString, ToSharedString};
 use std::collections::VecDeque;
 use std::io::ErrorKind;
@@ -43,13 +43,33 @@ fn make_connection() -> Box<dyn SerialPort> {
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let window = Dashboard::new()?; // From the Slint DSL 
-
-    let mut port = make_connection();
-    // Circular buff implmentation would be nice at some point
-    let mut queue: VecDeque<u8> = VecDeque::new();
-    let mut serial_buf: Vec<u8> = vec![0; 32];
     let ui_handle = window.as_weak();
+
+    //initialize default values for window
+    let _ = ui_handle.upgrade_in_event_loop(move |window| {
+        window.set_speed(0.0 as f32);
+        window.set_leftBlinkerOn(false);
+        window.set_rightBlinkerOn(false);
+        window.set_throttle(0 as i32);
+        window.set_tempBMS(0 as i32);
+        window.set_tempMotor(0.0 as f32);
+        window.set_headlightsOn(false);
+        window.set_limitId(0 as i32);
+        window.set_errorOut("".to_shared_string());
+        window.set_serialConnection(false);
+    });
+
+
+
+
     thread::spawn(move || {
+        let mut port = make_connection();
+        // Circular buff implmentation would be nice at some point
+        let mut queue: VecDeque<u8> = VecDeque::new();
+        let mut serial_buf: Vec<u8> = vec![0; 32];
+
+
+
         let mut speed = 0.0;
         let mut throttle = 0;
         let mut headlights_on = false;
@@ -62,7 +82,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         loop {
             let temp_bms = 0;
             //let mut error_out: SharedString = "".to_shared_string();
-
+            
             match port.read(serial_buf.as_mut_slice()) {
                 Ok(t) => {
                     for item in &serial_buf[..t] {
@@ -169,6 +189,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 window.set_headlightsOn(headlights_on);
                 window.set_limitId(limit_code as i32);
                 window.set_errorOut(warning);
+                window.set_serialConnection(true);
             });
         }
     });
