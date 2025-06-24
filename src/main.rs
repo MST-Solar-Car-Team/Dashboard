@@ -22,18 +22,24 @@ const MOTOR_STATUS_PACKET_ID: u8 = 0x06;
 
 fn make_connection() -> Box<dyn SerialPort> {
     loop {
-        let serial_port_info = serialport::available_ports().unwrap().into_iter().next();
+        let available_ports = serialport::available_ports().unwrap().into_iter();
+        
 
-        if serial_port_info.is_some() {
-            let serial_port_info = serial_port_info.unwrap();
+        for serial_port_info in available_ports {
 
             let port = serialport::new(serial_port_info.port_name, 9600)
                 .timeout(Duration::from_millis(50))
                 .open();
 
             if port.is_ok() {
-                return port.unwrap();
+                let mut port = port.unwrap();
+                let mut buf: Vec<u8> = vec![32; 0];
+                
+                if port.read(buf.as_mut_slice()).is_ok(){
+                    return port;
+                }
             }
+
         }
 
         println!("port not found, trying again");
@@ -44,7 +50,6 @@ fn make_connection() -> Box<dyn SerialPort> {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let window = Dashboard::new()?; // From the Slint DSL 
     let ui_handle = window.as_weak();
-
     //initialize default values for window
     let _ = ui_handle.upgrade_in_event_loop(move |window| {
         window.set_speed(0.0 as f32);
