@@ -24,8 +24,10 @@ fn make_connection() -> Box<dyn SerialPort> {
     loop {
         let available_ports = serialport::available_ports().unwrap().into_iter();
         
+        println!("ports: {:?}",available_ports);
 
         for serial_port_info in available_ports {
+            println!("port_name: {}",serial_port_info.port_name);
 
             let port = serialport::new(serial_port_info.port_name, 9600)
                 .timeout(Duration::from_millis(50))
@@ -36,6 +38,7 @@ fn make_connection() -> Box<dyn SerialPort> {
                 let mut buf: Vec<u8> = vec![32; 0];
                 
                 if port.read(buf.as_mut_slice()).is_ok(){
+                    println!("connection: {:?}",buf);
                     return port;
                 }
             }
@@ -83,6 +86,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let mut temp_motor = 0.0;
         let mut limit_code: u16 = 0;
         let mut error_out: SharedString = "".to_shared_string();
+        let mut has_serial_connection = true;
 
         loop {
             let temp_bms = 0;
@@ -90,6 +94,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             
             match port.read(serial_buf.as_mut_slice()) {
                 Ok(t) => {
+                    println!("Buf:{:?}",serial_buf);
+                    has_serial_connection = true;
                     for item in &serial_buf[..t] {
                         queue.push_back(item.to_owned());
                     }
@@ -98,6 +104,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     if e.kind() == ErrorKind::BrokenPipe {
                         port = make_connection();
                         println!("Recovered port!");
+                    }
+                    if e.kind() == ErrorKind::TimedOut{
+                        has_serial_connection = false;
                     }
                     println!("Random Error: {}", e);
                 }
@@ -194,7 +203,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 window.set_headlightsOn(headlights_on);
                 window.set_limitId(limit_code as i32);
                 window.set_errorOut(warning);
-                window.set_serialConnection(true);
+                window.set_serialConnection(has_serial_connection);
             });
         }
     });
