@@ -6,12 +6,15 @@ mod serial;
 use crate::serial::packets::{PedalPacket, VelocityPacket};
 use serial::packets::{LightsPacket, MotorStatusPacket, MotorTempaturePacket};
 use serialport::{Error, SerialPort};
-use slint::{ComponentHandle, SharedString, ToSharedString};
+use slint::{ComponentHandle, SharedString, ToSharedString, SharedPixelBuffer};
 use std::collections::VecDeque;
 use std::io::ErrorKind;
 use std::thread;
 use std::time::Duration;
 slint::include_modules!();
+
+
+use opencv::{core, imgproc, prelude::*, videoio, Result};
 
 const CAN_PACKET_ID: u8 = 0x01;
 const LIGHTS_PACKET_ID: u8 = 0x02;
@@ -68,18 +71,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
 
-
-
     thread::spawn(move || {
         let mut port = make_connection();
         // Circular buff implmentation would be nice at some point
         let mut queue: VecDeque<u8> = VecDeque::new();
         let mut serial_buf: Vec<u8> = vec![0; 32];
 
-
+        //Camera
+        let mut cam = videoio::VideoCapture::new(0, videoio::CAP_ANY).unwrap();
+        // let opened = videoio::VideoCapture::is_opened(&cam).unwrap();
 
         let mut speed = 0.0;
         let mut throttle = 0;
+        let mut reversed: bool = false;
         let mut headlights_on = false;
         let mut left_on = false;
         let mut right_on = false;
@@ -192,6 +196,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             let warning = error_out.clone();
 
+            //backup camera
+            if reversed {
+                if let Some(buffer) = update_frame(&mut cam) {
+                    let _ = ui_handle.upgrade_in_event_loop( move |window| {
+                        window.set_backupCamera(slint::Image::from_rgb8(buffer))
+                    });
+
+                }
+
+                continue;
+            }
+
             // Update UI on the event loop
             let _ = ui_handle.upgrade_in_event_loop(move |window| {
                 window.set_speed(speed as f32);
@@ -210,4 +226,32 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     _ = window.run();
     Ok(())
+}
+
+
+fn update_frame(cam:&mut videoio::VideoCapture) -> Option<SharedPixelBuffer::<slint::Rgb8Pixel>> {
+    let mut frame = core::Mat::default();
+    cam.read(&mut frame).unwrap();
+    // if frame.size()?.width == 0 {
+    //     return;
+    // }
+
+    // Convert to RGB
+    let mut rgb = core::Mat::default();
+    imgproc::cvt_color(&frame, &mut rgb, imgproc::COLOR_BGR2RGB, 0, core::AlgorithmHint::ALGO_HINT_DEFAULT).unwrap();
+
+    let size = rgb.size().unwrap();
+    let width = size.width as usize;
+    let height = size.height as usize;
+
+    // Convert OpenCV Mat to SharedPixelBuffer
+    let data = rgb.data_bytes().unwrap();
+    // SharedPixelBuffer::<slint::Rgb8Pixel>::from(data);
+    let buffer = SharedPixelBuffer::<slint::Rgb8Pixel>::clone_from_slice(
+        data,
+        width as u32,
+        height as u32,
+    );
+
+    return  Some(buffer);
 }

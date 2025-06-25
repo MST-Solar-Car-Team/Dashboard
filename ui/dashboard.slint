@@ -124,12 +124,22 @@ export component Dashboard inherits Window {
                 }
             }
         }
+
+        VerticalLayout {
+            Image {
+                source: root.backupCamera;
+                width: 100%;
+                height: 100%;
+                // fit: fill;
+            }
+        }
     }
 
     in property <float> speed;
     in property <bool> leftBlinkerOn;
     in property <bool> rightBlinkerOn;
     in property <bool> headlightsOn;
+    in property <bool> breaklightsOn;
     in property <int> throttle;
     in property <int> tempBMS;
     in property <int> limitId;
@@ -137,4 +147,5 @@ export component Dashboard inherits Window {
     in property <string> errorOut;
     in property <bool> serialConnection;
     in property <[string]> limitFlags;
+    in property <image> backupCamera;
 }

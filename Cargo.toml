@@ -9,6 +9,7 @@ edition = "2024"
 slint = "1.8.0"
 # slint = { version = "1.8", default-features = false, features = ["backend-winit-wayland", "renderer-femtovg", "compat-1-2"] }
 serialport = "4.7.1"
+opencv = "0.94.4"
 
 [build-dependencies]
 slint-build = "1.8.0"
