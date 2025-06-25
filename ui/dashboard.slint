@@ -124,15 +124,16 @@ export component Dashboard inherits Window {
                 }
             }
         }
+           
+        visible: !reversing;
+    }
 
-        VerticalLayout {
-            Image {
-                source: root.backupCamera;
-                width: 100%;
-                height: 100%;
-                // fit: fill;
-            }
-        }
+    Image {
+        source: root.backupCamera;
+        width: 100%;
+        height: 100%;
+        // fit: fill;
+        visible: reversing;
     }
 
     in property <float> speed;
@@ -147,5 +148,7 @@ export component Dashboard inherits Window {
     in property <string> errorOut;
     in property <bool> serialConnection;
     in property <[string]> limitFlags;
+
+    in property <bool> reversing;
     in property <image> backupCamera;
 }

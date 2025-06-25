@@ -83,7 +83,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         let mut speed = 0.0;
         let mut throttle = 0;
-        let mut reversed: bool = false;
+        let mut reversed: bool = true;
         let mut headlights_on = false;
         let mut left_on = false;
         let mut right_on = false;
@@ -200,7 +200,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             if reversed {
                 if let Some(buffer) = update_frame(&mut cam) {
                     let _ = ui_handle.upgrade_in_event_loop( move |window| {
-                        window.set_backupCamera(slint::Image::from_rgb8(buffer))
+                        window.set_backupCamera(slint::Image::from_rgb8(buffer));
+                        window.set_reversing(true);
                     });
 
                 }
@@ -220,6 +221,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 window.set_limitId(limit_code as i32);
                 window.set_errorOut(warning);
                 window.set_serialConnection(has_serial_connection);
+                window.set_reversing(false);
             });
         }
     });
