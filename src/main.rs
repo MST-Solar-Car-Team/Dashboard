@@ -105,10 +105,10 @@ fn make_connection() -> Box<dyn SerialPort + 'static> {
                 let mut port = port.unwrap();
                 let mut buf: Vec<u8> = vec![32; 0];
                 
-                if port.read(buf.as_mut_slice()).is_ok(){
+                // if port.read(buf.as_mut_slice()).is_ok(){
                     println!("connection: {:?}",buf);
                     return port;
-                }
+                // }
             }
 
         }
