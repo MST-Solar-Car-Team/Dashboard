@@ -26,23 +26,11 @@ const MOTOR_STATUS_PACKET_ID: u8 = 0x06;
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let window = Dashboard::new()?; // From the Slint DSL 
     let ui_handle = window.as_weak();
-    //initialize default values for window
-    let _ = ui_handle.upgrade_in_event_loop(move |window| {
-        window.set_speed(0.0 as f32);
-        window.set_leftBlinkerOn(false);
-        window.set_rightBlinkerOn(false);
-        window.set_throttle(0 as i32);
-        window.set_tempBMS(0 as i32);
-        window.set_tempMotor(0.0 as f32);
-        window.set_headlightsOn(false);
-        window.set_limitId(0 as i32);
-        window.set_errorOut("".to_shared_string());
-        window.set_serialConnection(false);
-    });
 
-    let mut data_arc_window: Arc<Mutex<WindowData>> = Arc::new(Mutex::new(WindowData::default()));
-    let mut data_arc_serial: Arc<Mutex<WindowData>> = Arc::clone(&data_arc_window);
+    let data_arc_window: Arc<Mutex<WindowData>> = Arc::new(Mutex::new(WindowData::default()));
+    let data_arc_serial: Arc<Mutex<WindowData>> = Arc::clone(&data_arc_window);
 
+    //Window updating thread
     thread::spawn(move || {
         loop {
             let data = data_arc_window.lock();
@@ -64,7 +52,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 window.set_headlightsOn(data.headlights_on);
                 window.set_limitId(data.limit_code as i32);
                 window.set_errorOut(data.error_out);
-                window.set_serialConnection(data.has_serial_connection);
+                window.set_serialError(data.serial_error);
             });
 
             //don't overload the screen
@@ -73,6 +61,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
+    //serial_updating thread
     thread::spawn(move || {
         update_serial(data_arc_serial);
     });
@@ -95,7 +84,7 @@ struct WindowData {
     temp_motor: f32,
     limit_code: u16 ,
     error_out: SharedString,
-    has_serial_connection: bool, 
+    serial_error: SharedString, 
 }
 
 fn make_connection() -> Box<dyn SerialPort + 'static> {
@@ -141,7 +130,7 @@ fn update_serial(data:Arc<Mutex<WindowData>>) { // port:Box<dyn SerialPort + 'st
                 println!("Buf:{:?}",serial_buf);
                 //updates serial working status
                 if let Ok(mut mutex) = data.lock(){
-                    mutex.has_serial_connection = true;
+                    mutex.serial_error = "None".to_shared_string();
                 }
                 
                 for item in &serial_buf[..t] {
@@ -149,18 +138,17 @@ fn update_serial(data:Arc<Mutex<WindowData>>) { // port:Box<dyn SerialPort + 'st
                 }
             }
             Err(e) => {
-                //tells gui that the serial is broke
-                if let Ok(mut mutex) = data.lock(){
-                    mutex.has_serial_connection = false;
-                }
 
                 if e.kind() == ErrorKind::BrokenPipe {
+                    if let Ok(mut mutex) = data.lock(){
+                        mutex.serial_error = "Broken Pipe".to_shared_string();
+                    }
+
                     port = make_connection();
                     println!("Recovered port!");
                 }
-                if e.kind() == ErrorKind::TimedOut{
 
-                }
+                                
                 println!("Random Error: {}", e);
             }
         }
