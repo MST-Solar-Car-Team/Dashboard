@@ -97,17 +97,18 @@ fn make_connection() -> Box<dyn SerialPort + 'static> {
             println!("port_name: {}",serial_port_info.port_name);
 
             let port = serialport::new(serial_port_info.port_name, 9600)
-                .timeout(Duration::from_millis(50))
+                .timeout(Duration::from_millis(100))
+                .baud_rate(9600)
                 .open();
 
             if port.is_ok() {
                 let mut port = port.unwrap();
                 let mut buf: Vec<u8> = vec![32; 0];
                 
-                // if port.read(buf.as_mut_slice()).is_ok(){
+                if port.read(buf.as_mut_slice()).is_ok(){
                     println!("connection: {:?}",buf);
                     return port;
-                // }
+                }
             }
 
         }
@@ -119,6 +120,7 @@ fn make_connection() -> Box<dyn SerialPort + 'static> {
 
 fn update_serial(data:Arc<Mutex<WindowData>>) { // port:Box<dyn SerialPort + 'static>) -> Result<(),()>{
     let mut port = make_connection();
+    
     // Circular buff implmentation would be nice at some point
     let mut queue: VecDeque<u8> = VecDeque::new();
     let mut serial_buf: Vec<u8> = vec![0; 32];
@@ -242,6 +244,8 @@ fn update_serial(data:Arc<Mutex<WindowData>>) { // port:Box<dyn SerialPort + 'st
             }  
         }
 
+        //idk if this will be helpful, but maybe
+        thread::sleep(Duration::from_millis(25));
     }
 
 }
