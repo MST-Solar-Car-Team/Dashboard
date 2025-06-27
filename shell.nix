@@ -1,7 +1,7 @@
 { pkgs ? import <nixpkgs> {} }:
 pkgs.mkShell {
   packages = [ pkgs.gdb pkgs.opencv pkgs.llvmPackages.libclang.lib];
-  buildInputs = with pkgs;[ stdenv rustc cargo udev pkg-config libxkbcommon rust-analyzer clang llvm llvmPackages.libclang lld opencv];
+  buildInputs = with pkgs;[ stdenv rustc cargo rust.packages.stable.rustPlatform.rustLibSrc  udev pkg-config libxkbcommon rust-analyzer clang llvm llvmPackages.libclang lld opencv];
 
 
   
@@ -35,7 +35,7 @@ pkgs.mkShell {
     #export LIBCLANG_PATH="${pkgs.llvmPackages.libclang}/lib";
     export LIBCLANG_PATH="${pkgs.llvmPackages.libclang.lib}/lib";
 
+    export RUST_SRC_PATH="${pkgs.rust.packages.stable.rustPlatform.rustLibSrc}";
     '';
 
 }
-

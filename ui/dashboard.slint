@@ -82,6 +82,13 @@ export component Dashboard inherits Window {
                 horizontal-alignment: center;
             }
 
+            Text {
+                text: "Serial Error: " + root.serialError;
+                font-size: 20px;
+                color: #ff0000;
+                horizontal-alignment: center;
+            }
+
             for item in root.limitFlags: Text {
                 text: "Limit: " + item;
                 font-size: 20px;
@@ -146,7 +153,7 @@ export component Dashboard inherits Window {
     in property <int> limitId;
     in property <float> tempMotor;
     in property <string> errorOut;
-    in property <bool> serialConnection;
+    in property <string> serialError;
     in property <[string]> limitFlags;
 
     in property <bool> reversing;
