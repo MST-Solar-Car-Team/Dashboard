@@ -139,17 +139,18 @@ fn update_serial(data:Arc<Mutex<WindowData>>) { // port:Box<dyn SerialPort + 'st
             }
             Err(e) => {
 
-                if e.kind() == ErrorKind::BrokenPipe {
-                    if let Ok(mut mutex) = data.lock(){
-                        mutex.serial_error = "Broken Pipe".to_shared_string();
-                    }
-
-                    port = make_connection();
-                    println!("Recovered port!");
+                //Prints error to window
+                if let Ok(mut mutex) = data.lock(){
+                    mutex.serial_error = e.to_shared_string();
                 }
 
+                if e.kind() == ErrorKind::BrokenPipe {
+                    port = make_connection();
+                    println!("Recovered port!");
+                }else {
+                    println!("Random Error: {}", e);
+                }
                                 
-                println!("Random Error: {}", e);
             }
         }
 
