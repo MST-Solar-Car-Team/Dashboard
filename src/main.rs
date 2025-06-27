@@ -29,9 +29,11 @@ const MOTOR_STATUS_PACKET_ID: u8 = 0x06;
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let window = Dashboard::new()?; // From the Slint DSL 
     let ui_handle = window.as_weak();
+    let ui_camera_handle = window.as_weak();
 
     let data_arc_window: Arc<Mutex<WindowData>> = Arc::new(Mutex::new(WindowData::default()));
     let data_arc_serial: Arc<Mutex<WindowData>> = Arc::clone(&data_arc_window);
+    let data_arc_camera: Arc<Mutex<WindowData>> = Arc::clone(&data_arc_window);
 
     //Window updating thread
     thread::spawn(move || {
@@ -42,7 +44,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 continue;
             }
             let data = data.unwrap().clone();
-
+     
 
             // Update UI on the event loop
             let _ = ui_handle.upgrade_in_event_loop(move |window| {
@@ -69,6 +71,44 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         update_serial(data_arc_serial);
     });
 
+    //reverse cam
+    thread::spawn(move || {
+        //Camera
+        let mut cam_res = videoio::VideoCapture::new(0, videoio::CAP_ANY);
+        // let opened = videoio::VideoCapture::is_opened(&cam).unwrap();
+
+        //waits until camera is found
+        while cam_res.is_err() {
+            cam_res = videoio::VideoCapture::new(0, videoio::CAP_ANY);
+        }
+
+        let mut cam = cam_res.unwrap();
+
+        loop {
+            let data = data_arc_camera.lock();
+
+            if data.is_err() {
+                continue;
+            }
+            let data = data.unwrap().clone();
+
+             //backup camera
+            if data.reversed {
+                if let Some(buffer) = update_frame(&mut cam) {
+                    let _ = ui_camera_handle.upgrade_in_event_loop( move |window| {
+                        window.set_backupCamera(slint::Image::from_rgb8(buffer));
+                        window.set_reversing(true);
+                    });
+                }
+            }else {
+                let _ = ui_camera_handle.upgrade_in_event_loop(move |window| {
+                    window.set_reversing(false);
+                });
+            }
+ 
+        }
+    });
+
     _ = window.run();
 
 
@@ -80,6 +120,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 struct WindowData {
     speed: f32, 
     throttle: i32, 
+    reversed: bool,
     headlights_on: bool, 
     left_on: bool, 
     right_on: bool,
@@ -256,16 +297,16 @@ fn update_serial(data:Arc<Mutex<WindowData>>) { // port:Box<dyn SerialPort + 'st
 
 fn update_frame(cam:&mut videoio::VideoCapture) -> Option<SharedPixelBuffer::<slint::Rgb8Pixel>> {
     let mut frame = core::Mat::default();
-    cam.read(&mut frame).unwrap();
+    cam.read(&mut frame).ok()?;
     // if frame.size()?.width == 0 {
     //     return;
     // }
 
     // Convert to RGB
     let mut rgb = core::Mat::default();
-    imgproc::cvt_color(&frame, &mut rgb, imgproc::COLOR_BGR2RGB, 0, core::AlgorithmHint::ALGO_HINT_DEFAULT).unwrap();
+    imgproc::cvt_color(&frame, &mut rgb, imgproc::COLOR_BGR2RGB, 0, core::AlgorithmHint::ALGO_HINT_DEFAULT).ok()?;
 
-    let size = rgb.size().unwrap();
+    let size = rgb.size().ok()?;
     let width = size.width as usize;
     let height = size.height as usize;
 
