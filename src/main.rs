@@ -43,7 +43,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             if data.is_err() {
                 continue;
             }
-            let data = data.unwrap().clone();
+            let mut data = data.unwrap().clone();
      
 
             // Update UI on the event loop
@@ -52,6 +52,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 window.set_leftBlinkerOn(data.left_on);
                 window.set_rightBlinkerOn(data.right_on);
                 window.set_throttle(data.throttle as i32);
+                window.set_reversing(data.reversing);
                 window.set_tempBMS(data.temp_bms as i32);
                 window.set_tempMotor(data.temp_motor);
                 window.set_headlightsOn(data.headlights_on);
@@ -93,14 +94,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let data = data.unwrap().clone();
 
              //backup camera
-            if data.reversed {
+            if data.reversing {
                 if let Some(buffer) = update_frame(&mut cam) {
                     let _ = ui_camera_handle.upgrade_in_event_loop( move |window| {
                         window.set_backupCamera(slint::Image::from_rgb8(buffer));
                         window.set_reversing(true);
                     });
                 }
-            }else {
+            } else {
                 let _ = ui_camera_handle.upgrade_in_event_loop(move |window| {
                     window.set_reversing(false);
                 });
@@ -120,7 +121,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 struct WindowData {
     speed: f32, 
     throttle: i32, 
-    reversed: bool,
+    reversing: bool,
     headlights_on: bool, 
     left_on: bool, 
     right_on: bool,
@@ -149,10 +150,10 @@ fn make_connection() -> Box<dyn SerialPort + 'static> {
                 let mut port = port.unwrap();
                 let mut buf: Vec<u8> = vec![32; 0];
                 
-                if port.read(buf.as_mut_slice()).is_ok(){
+                // if port.read(buf.as_mut_slice()).is_ok(){
                     println!("connection: {:?}",buf);
                     return port;
-                }
+                // }
             }
 
         }
@@ -193,7 +194,10 @@ fn update_serial(data:Arc<Mutex<WindowData>>) { // port:Box<dyn SerialPort + 'st
                 if e.kind() == ErrorKind::BrokenPipe {
                     port = make_connection();
                     println!("Recovered port!");
-                }else {
+                }else if e.kind() == ErrorKind::TimedOut {
+                    port = make_connection();
+                    println!("Recovered port!");
+                } else {
                     println!("Random Error: {}", e);
                 }
                                 
@@ -211,6 +215,7 @@ fn update_serial(data:Arc<Mutex<WindowData>>) { // port:Box<dyn SerialPort + 'st
             let packet_id = packet_byte.unwrap();
                 
             if let Ok(mut data) = data.lock(){
+                data.reversing = true;
                 match packet_id {
                     PEDAL_PACKET_ID => {
                         if let Ok(pedal_packet) = PedalPacket::from_bytes(&[
