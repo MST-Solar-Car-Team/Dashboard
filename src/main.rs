@@ -193,10 +193,7 @@ fn update_serial(data:Arc<Mutex<WindowData>>) { // port:Box<dyn SerialPort + 'st
                 if e.kind() == ErrorKind::BrokenPipe {
                     port = make_connection();
                     println!("Recovered port!");
-                } else if e.kind() == ErrorKind::TimedOut {
-                    port = make_connection();
-                    println!("Recovered port!");
-                } else {
+                }else {
                     println!("Random Error: {}", e);
                 }
                                 
