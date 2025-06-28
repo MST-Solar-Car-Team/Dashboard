@@ -53,6 +53,8 @@
             rustToolchain
             crossPkgs.stdenv.cc  # provides aarch64-unknown-linux-gnu-gcc
             hostPkgs.installShellFiles
+
+            hostPkgs.clang hostPkgs.llvm hostPkgs.llvmPackages.libclang hostPkgs.lld
           ];
 
 
@@ -68,6 +70,8 @@
             xorg.libXi
             xorg.libXrandr
             xorg.libxcb
+
+            opencv
             ];
 
           postFixup = ''
@@ -76,6 +80,7 @@
                 hostPkgs.lib.makeLibraryPath [
                   crossPkgs.fontconfig
                   crossPkgs.libGL
+                  crossPkgs.opencv
                 ]
               }
           '';
