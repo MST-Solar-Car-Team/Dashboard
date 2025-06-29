@@ -1,7 +1,37 @@
 { pkgs ? import <nixpkgs> {} }:
 pkgs.mkShell {
   packages = [ pkgs.gdb pkgs.opencv pkgs.llvmPackages.libclang.lib];
-  buildInputs = with pkgs;[ stdenv rustc cargo rust.packages.stable.rustPlatform.rustLibSrc  udev pkg-config libxkbcommon rust-analyzer clang llvm llvmPackages.libclang lld opencv];
+  pkgs.opencv.overrideAttrs  =(finalAttrs: { 
+              enableJPEG = false;
+              enablePNG = false;
+              enableTIFF = false;
+              enableWebP = false;
+              enableJPEG2000 = false;
+              enableEigen = false;
+              enableBlas = false;
+              enableVA = false;
+              enableContrib = false;
+
+              enableCuda = false;
+              enableCublas = false;
+              enableCudnn = false; # NOTE: CUDNN has a large impact on closure size so we disable it by default
+              enableCufft = false;
+
+              enableLto = false;
+              enableFfmpeg = false;
+              enableGStreamer = true;
+          });  
+  buildInputs = with pkgs;[
+    stdenv
+    rustc cargo rust.packages.stable.rustPlatform.rustLibSrc
+    udev pkg-config libxkbcommon
+    rust-analyzer
+    clang llvm llvmPackages.libclang lld 
+    opencv
+
+          
+     ];
+          
 
 
   

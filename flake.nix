@@ -7,13 +7,50 @@
     rust-overlay = {
       url = "github:oxalica/rust-overlay";
       inputs.nixpkgs.follows = "nixpkgs";
+      
     };
+
   };
+      nixConfig = {
+        extra-substituters = [
+          "https://nix-community.cachix.org"
+        ];
+        extra-trusted-public-keys = [
+          "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
+        ];
+      };    
+
+  
 
   outputs = { self, nixpkgs, flake-utils, rust-overlay }:
     flake-utils.lib.eachDefaultSystem (system:
       let
-        overlays = [ (import rust-overlay) ];
+        overlays = [
+          (import rust-overlay)
+          (final: prev: {
+            opencv = prev.opencv.override {
+              enableJPEG = false;
+              enablePNG = false;
+              enableTIFF = false;
+              enableWebP = false;
+              enableEXR = true;
+              enableJPEG2000 = false;
+              enableEigen = false;
+              enableBlas = false;
+              enableVA = true;
+              enableContrib = false;
+
+              enableCuda = false;
+              enableCublas = false;
+              enableCudnn = false; # NOTE: CUDNN has a large impact on closure size so we disable it by default
+              enableCufft = false;
+
+              enableLto = false;
+              enableFfmpeg = false;
+              enableGStreamer = true;
+            };
+          })
+        ];
 
         # Host packages: used for tooling like cargo, rustc, etc.
         hostPkgs = import nixpkgs {
@@ -41,6 +78,7 @@
           rustc = rustToolchain;
         };
 
+
       in {
         packages.default = rustPlatform.buildRustPackage {
           pname = "dashboard";
@@ -54,7 +92,9 @@
             crossPkgs.stdenv.cc  # provides aarch64-unknown-linux-gnu-gcc
             hostPkgs.installShellFiles
 
-            hostPkgs.clang hostPkgs.llvm hostPkgs.llvmPackages.libclang hostPkgs.lld
+            # hostPkgs.clang hostPkgs.llvm hostPkgs.llvmPackages.libclang hostPkgs.lld
+            crossPkgs.clang crossPkgs.llvm crossPkgs.llvmPackages.libclang crossPkgs.lld
+            crossPkgs.clangStdenv
           ];
 
 
@@ -93,6 +133,7 @@
 
           # Prevent cargo from building a native binary by default
           buildPhase = ''
+            export LIBCLANG_PATH="${hostPkgs.llvmPackages.libclang.lib}/lib";
             cargo build --release --target ${target}
           '';
 
