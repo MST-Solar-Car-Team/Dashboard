@@ -149,10 +149,10 @@ fn make_connection() -> Box<dyn SerialPort + 'static> {
                 let mut port = port.unwrap();
                 let mut buf: Vec<u8> = vec![32; 0];
                 
-                // if port.read(buf.as_mut_slice()).is_ok(){
+                if port.read(buf.as_mut_slice()).is_ok(){
                     println!("connection: {:?}",buf);
                     return port;
-                // }
+                }
             }
 
         }
@@ -192,10 +192,7 @@ fn update_serial(data:Arc<Mutex<WindowData>>) { // port:Box<dyn SerialPort + 'st
                 if e.kind() == ErrorKind::BrokenPipe {
                     port = make_connection();
                     println!("Recovered port!");
-                }else if e.kind() == ErrorKind::TimedOut {
-                    port = make_connection();
-                    println!("Recovered port!");
-                } else {
+                }else {
                     println!("Random Error: {}", e);
                 }
                                 
