@@ -84,6 +84,7 @@ pub mod packets {
         pub right_blinkers: bool,
         pub left_blinkers: bool,
         pub brake_lights: bool,
+        pub reversed: bool,
     }
 
     impl LightsPacket {
@@ -96,12 +97,14 @@ pub mod packets {
             let right_blinkers: bool = to_bool(bytes[1]);
             let left_blinkers: bool = to_bool(bytes[2]);
             let brake_lights: bool = to_bool(bytes[3]);
+            let reversed: bool = to_bool(bytes[4]);
 
             Ok(LightsPacket {
                 headlights,
                 right_blinkers,
                 left_blinkers,
                 brake_lights,
+                reversed,
             })
         }
     }
