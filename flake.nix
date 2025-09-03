@@ -2,7 +2,7 @@
   description = "Cross-compiling a Rust project to aarch64-linux";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.05";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.05";
     flake-utils.url = "github:numtide/flake-utils";
     rust-overlay = {
       url = "github:oxalica/rust-overlay";
@@ -26,6 +26,7 @@
           system = system;
           crossSystem = {
             config = "aarch64-unknown-linux-gnu";
+            rustc.config = "aarch64-unknown-linux-gnu";
           };
         };
 
@@ -35,7 +36,7 @@
           targets = [ target ];
         };
 
-        rustPlatform = hostPkgs.makeRustPlatform {
+        rustPlatform = crossPkgs.makeRustPlatform {
           cargo = rustToolchain;
           rustc = rustToolchain;
         };
@@ -47,14 +48,37 @@
           src = ./.;
 
           nativeBuildInputs = [
+            crossPkgs.pkg-config
             hostPkgs.pkg-config
             rustToolchain
             crossPkgs.stdenv.cc  # provides aarch64-unknown-linux-gnu-gcc
+            hostPkgs.installShellFiles
           ];
 
+
           buildInputs = with crossPkgs; [
+            libgit2
             openssl
-          ];
+            udev
+            expat
+            fontconfig
+            libGL
+            xorg.libX11
+            xorg.libXcursor
+            xorg.libXi
+            xorg.libXrandr
+            xorg.libxcb
+            ];
+
+          postFixup = ''
+            patchelf $out/bin/dashboard \
+              --add-rpath ${
+                hostPkgs.lib.makeLibraryPath [
+                  crossPkgs.fontconfig
+                  crossPkgs.libGL
+                ]
+              }
+          '';
 
           cargoDeps = rustPlatform.importCargoLock {
             lockFile = ./Cargo.lock;
@@ -79,11 +103,37 @@
           postPatch = ''
             mkdir -p .cargo
             cat > .cargo/config.toml <<EOF
-[target.${target}]
-linker = "${crossPkgs.stdenv.cc.targetPrefix}gcc"
-EOF
-          '';
+            [target.${target}]
+            linker = "${crossPkgs.stdenv.cc.targetPrefix}gcc"
+            EOF
+                      '';
         };
+
+        # devShells.${system}.default = hostPkgs.mkShell {
+
+        #   nativeBuildInputs = [
+        #     crossPkgs.pkg-config
+        #     hostPkgs.pkg-config
+        #     rustToolchain
+        #     crossPkgs.stdenv.cc  # provides aarch64-unknown-linux-gnu-gcc
+        #     hostPkgs.installShellFiles
+        #   ];
+
+        #   buildInputs = with crossPkgs; [
+        #     # openssl
+        #     udev
+        #   ];
+
+        #   shellHook = ''
+        #     mkdir -p .cargo
+        #     cat > .cargo/config.toml <<EOF
+        #     [target.${target}]
+        #     linker = "${crossPkgs.stdenv.cc.targetPrefix}gcc"
+        #     EOF
+        #               '';
+          
+
+        # };
 
         # Optional: Alias under the actual target system
         packages.${target} = self.outputs.packages.${system}.default;
